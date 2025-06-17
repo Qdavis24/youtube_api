@@ -1,4 +1,4 @@
-from . import api_bp, limiter
+from . import api_bp
 from flask import request, jsonify
 from app.services.youtube_service import YoutubeService
 import psutil
