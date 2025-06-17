@@ -11,7 +11,8 @@ class YoutubeService:
     def __init__(self):
         self._cache: dict[str, YoutubeVideo] = {}
         self.formatter = YoutubeDlpFormatter
-        self.temp_dir = tempfile.mkdtemp()
+        self.temp_dir = "/tmp"
+        os.makedirs(self.temp_dir, exist_ok=True)
 
     def _get_yt_config(self, filename_base):
         return {
