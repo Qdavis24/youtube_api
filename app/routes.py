@@ -35,9 +35,10 @@ def require_api_key(f):
 def health():
     return {"status": "ok"}
 
+
+@api_bp.route("/video-data", methods=["GET"])
 @require_api_key
 @track_bandwidth
-@api_bp.route("/video-data", methods=["GET"])
 def get_data():
     url = request.args.get("url")
     if not url:
@@ -47,9 +48,10 @@ def get_data():
     
     return jsonify(asdict(data))
 
+
+@api_bp.route("/automatic-captions", methods=["GET"])
 @require_api_key
 @track_bandwidth
-@api_bp.route("/automatic-captions", methods=["GET"])
 def get_automatic_captions():
     url = request.args.get("url")
     if not url:
@@ -59,9 +61,10 @@ def get_automatic_captions():
     
     return jsonify({"automatic_captions": automatic_captions})
 
+
+@api_bp.route("/video-id", methods=["GET"])
 @require_api_key
 @track_bandwidth
-@api_bp.route("/video-id", methods=["GET"])
 def get_id():
     url = request.args.get("url")
     if not url:
@@ -70,9 +73,10 @@ def get_id():
     video_id = ys.get_id(url)
     return jsonify({"video_id": video_id})
 
+
+@api_bp.route("/title", methods=["GET"])
 @require_api_key
 @track_bandwidth
-@api_bp.route("/title", methods=["GET"])
 def get_title():
     url = request.args.get("url")
     if not url:
@@ -81,9 +85,10 @@ def get_title():
     title = ys.get_title(url)
     return jsonify({"title": title})
 
+
+@api_bp.route("/description", methods=["GET"])
 @require_api_key
 @track_bandwidth
-@api_bp.route("/description", methods=["GET"])
 def get_description():
     url = request.args.get("url")
     if not url:
@@ -92,9 +97,10 @@ def get_description():
     description = ys.get_description(url)
     return jsonify({"description": description})
 
+
+@api_bp.route("/thumbnail", methods=["GET"])
 @require_api_key
 @track_bandwidth
-@api_bp.route("/thumbnail", methods=["GET"])
 def get_thumbnail():
     url = request.args.get("url")
     if not url:
