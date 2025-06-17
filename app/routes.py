@@ -17,7 +17,7 @@ def track_bandwidth(f):
         net_after = psutil.net_io_counters()
         bytes_used = net_after.bytes_recv - net_before.bytes_recv
         data = result.get_json()
-        data["bandwith_used"] = bytes_used
+        data["bandwidth_used"] = bytes_used
         return jsonify(data)
     return decorated_func
 

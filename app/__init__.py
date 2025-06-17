@@ -17,7 +17,7 @@ limiter = Limiter(key_func=get_remote_address, default_limits=["120 per minute"]
 
 def create_app():
     app = Flask(__name__)
-    app.config.from_object(DevelopmentConfig)
+    app.config.from_object(ProductionConfig)
     limiter.init_app(app)
     app.register_blueprint(api_bp)
 
