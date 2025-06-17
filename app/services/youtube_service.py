@@ -1,136 +1,76 @@
 from yt_dlp import YoutubeDL
-from app.models.youtube_video_raw import YoutubeVideoRaw
+from app.models.youtube_video import YoutubeVideo
 from app.utils.youtube_dlp_formatter import YoutubeDlpFormatter
-import requests
-import json
+import os
+import tempfile
+import hashlib
+
 
 
 class YoutubeService:
-    YT_CONFIG = {
-        "writeinfojson": True,
-        "writesubtitles": True,
-        "writeautomaticsub": True,
-        "skip_download": True,
-        "extract_flat": False,
-    }
-
     def __init__(self):
-        self._cache: dict[str, YoutubeVideoRaw] = {}
+        self._cache: dict[str, YoutubeVideo] = {}
         self.formatter = YoutubeDlpFormatter
+        self.temp_dir = tempfile.mkdtemp()
+
+    def _get_yt_config(self, filename_base):
+        return {
+            "writesubtitles": True,
+            "writeautomaticsub": True,
+            "skip_download": True,
+            "subtitleslangs": ["en", "en-orig"],
+            "subtitlesformat": "json3",
+            "outtmpl": os.path.join(self.temp_dir, f"{filename_base}.%(ext)s"),
+            "proxy": f"http://{os.environ.get('PROXY_USERNAME')}:{os.environ.get('PROXY_PASSWORD')}@p.webshare.io:{os.environ.get('PROXY_PORT')}"
+        }
 
     def _get_video_data(self, url: str):
         if url not in self._cache:
-            with YoutubeDL(params=YoutubeService.YT_CONFIG) as yt:
-                info = yt.extract_info(url=url, download=False)
-            self._cache[url] = YoutubeVideoRaw(raw_data=info, url=url)
+            url_hash = hashlib.md5(url.encode()).hexdigest()
+            with YoutubeDL(params=self._get_yt_config(url_hash)) as yt:
+                data = yt.extract_info(url=url, download=True)
+                
+            automatic_captions_filepath = f"{self.temp_dir}/{url_hash}.en.json3"
+                
+            if os.path.exists(automatic_captions_filepath):
+                with open(automatic_captions_filepath, "r") as automatic_caption_file:
+                    parsed_automatic_captions = self.formatter.parse_json3_transcript(
+                        automatic_caption_file.read()
+                    )
+                os.remove(automatic_captions_filepath)
+            else:
+                parsed_automatic_captions = "No transcript available"
+
+            self._cache[url] = YoutubeVideo(
+                url=url,
+                video_id=data.get("id", "unknown"),
+                title=data.get("title", "unknown"),
+                description=data.get("description", "unknown"),
+                thumbnail_url=data.get("thumbnail", "unknown"),
+                automatic_captions=parsed_automatic_captions,
+            )
         return self._cache[url]
+    
+    def get_data(self, url: str):
+        data = self._get_video_data(url)
+        return data
 
     def get_description(self, url: str):
         data = self._get_video_data(url)
-        return data.raw_data.get("description", "unknown")
+        return data.description
 
     def get_title(self, url: str):
         data = self._get_video_data(url)
-        return data.raw_data.get("title", "unknown")
+        return data.title
 
     def get_id(self, url: str):
         data = self._get_video_data(url)
-        return data.raw_data.get("id", "unknown")
+        return data.video_id
 
-    def get_transcript(self, url: str):
+    def get_automatic_captions(self, url: str):
         data = self._get_video_data(url)
-        
-        # Try automatic captions first
-        auto_captions = data.raw_data.get("automatic_captions", {})
-        captions = auto_captions.get("en") or auto_captions.get("en-orig")
-        
-        # If no auto captions, try manual subtitles
-        if not captions:
-            subtitles = data.raw_data.get("subtitles", {})
-            captions = subtitles.get("en") or subtitles.get("en-orig")
-        
-        if not captions:
-            return "No transcript available"
-        
-        # Find best format (prefer json3, then srv1, then others)
-        format_priority = ["json3", "srv1", "srv2", "srv3", "vtt", "srt"]
-        transcript_url = None
-        
-        for fmt in format_priority:
-            for caption in captions:
-                if caption.get("ext") == fmt:
-                    transcript_url = caption.get("url")
-                    break
-            if transcript_url:
-                break
-        
-        if not transcript_url:
-            return "No suitable transcript format found"
-        
-        # Download and parse transcript
-        try:
-            response = requests.get(transcript_url, timeout=10)
-            response.raise_for_status()
-            
-            if transcript_url.endswith("json3"):
-                return self._parse_json3_transcript(response.text)
-            elif "srv" in transcript_url:
-                return self._parse_srv_transcript(response.text)
-            else:
-                return self._parse_vtt_srt_transcript(response.text)
-                
-        except requests.RequestException:
-            return "Failed to download transcript"
-    
-    def _parse_json3_transcript(self, content: str) -> str:
-        try:
-            data = json.loads(content)
-            events = data.get("events", [])
-            transcript_parts = []
-            
-            for event in events:
-                if "segs" in event:
-                    for seg in event["segs"]:
-                        if "utf8" in seg:
-                            transcript_parts.append(seg["utf8"])
-            
-            return " ".join(transcript_parts).strip()
-        except (json.JSONDecodeError, KeyError):
-            return "Failed to parse JSON3 transcript"
-    
-    def _parse_srv_transcript(self, content: str) -> str:
-        # SRV format is XML-based
-        import re
-        text_matches = re.findall(r'<text[^>]*>(.*?)</text>', content, re.DOTALL)
-        transcript_parts = []
-        
-        for match in text_matches:
-            # Remove HTML entities and tags
-            clean_text = re.sub(r'&[^;]+;', '', match)
-            clean_text = re.sub(r'<[^>]+>', '', clean_text)
-            if clean_text.strip():
-                transcript_parts.append(clean_text.strip())
-        
-        return " ".join(transcript_parts)
-    
-    def _parse_vtt_srt_transcript(self, content: str) -> str:
-        # Parse VTT/SRT format
-        import re
-        lines = content.split('\n')
-        transcript_parts = []
-        
-        for line in lines:
-            line = line.strip()
-            # Skip timestamp lines and empty lines
-            if '-->' in line or line.isdigit() or not line:
-                continue
-            # Skip VTT header
-            if line.startswith('WEBVTT') or line.startswith('NOTE'):
-                continue
-            transcript_parts.append(line)
-        
-        return " ".join(transcript_parts)
+        return data.automatic_captions
 
     def get_thumbnail(self, url: str):
         data = self._get_video_data(url)
-        return data.raw_data.get("thumbnail", "unknown")
+        return data.thumbnail_url
