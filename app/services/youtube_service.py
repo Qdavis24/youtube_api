@@ -23,7 +23,7 @@ class YoutubeService:
             "writesubtitles": True,
             "writeautomaticsub": True,
             "skip_download": True,
-            "subtitleslangs": ["en", "en-orig"],
+            "subtitleslangs": ["en"],
             "subtitlesformat": "json3",
             "outtmpl": os.path.join(self.temp_dir, f"{filename_base}.%(ext)s"),
             "proxy": config.PROXY
