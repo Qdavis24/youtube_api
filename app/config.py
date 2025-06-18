@@ -15,4 +15,4 @@ class ProductionConfig(Config):
     PROXY = f"http://{os.environ.get('PROXY_USERNAME')}:{os.environ.get('PROXY_PASSWORD')}@p.webshare.io:{os.environ.get('PROXY_PORT')}"
 
 # CHANGE FOR DEPLOYMENT TO PRODUCTION SERVER
-config = ProductionConfig
+config = DevelopmentConfig
