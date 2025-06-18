@@ -44,7 +44,10 @@ def get_data():
     if not url:
         return jsonify({"error": "URL parameter required"}), 400
     
-    data = ys.get_data(url)
+    try:
+        data = ys.get_data(url)
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
     
     return jsonify(asdict(data))
 
@@ -57,7 +60,10 @@ def get_automatic_captions():
     if not url:
         return jsonify({"error": "URL parameter required"}), 400
     
-    automatic_captions = ys.get_automatic_captions(url)
+    try:
+        automatic_captions = ys.get_automatic_captions(url)
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
     
     return jsonify({"automatic_captions": automatic_captions})
 
@@ -69,8 +75,11 @@ def get_id():
     url = request.args.get("url")
     if not url:
         return jsonify({"error": "URL parameter required"}), 400
+    try:
+        video_id = ys.get_id(url)
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
     
-    video_id = ys.get_id(url)
     return jsonify({"video_id": video_id})
 
 
@@ -81,8 +90,11 @@ def get_title():
     url = request.args.get("url")
     if not url:
         return jsonify({"error": "URL parameter required"}), 400
+    try:
+        title = ys.get_title(url)
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
     
-    title = ys.get_title(url)
     return jsonify({"title": title})
 
 
@@ -93,8 +105,11 @@ def get_description():
     url = request.args.get("url")
     if not url:
         return jsonify({"error": "URL parameter required"}), 400
+    try:
+        description = ys.get_description(url)
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
     
-    description = ys.get_description(url)
     return jsonify({"description": description})
 
 
@@ -106,5 +121,9 @@ def get_thumbnail():
     if not url:
         return jsonify({"error": "URL parameter required"}), 400
     
-    thumbnail_url = ys.get_thumbnail(url)
+    try:
+        thumbnail_url = ys.get_thumbnail(url)
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+    
     return jsonify({"thumbnail_url": thumbnail_url})
