@@ -47,8 +47,8 @@ def get_data():
     try:
         data = ys.get_data(url)
     except Exception as e:
+        print(f"\nERROR\n{e}\n\n")
         return jsonify({"error": str(e)}), 500
-    
     return jsonify(asdict(data))
 
 
